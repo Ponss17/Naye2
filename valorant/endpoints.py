@@ -95,7 +95,6 @@ def ultima_ranked():
         if team:
             gano = match.get('teams', {}).get(team.lower(), {}).get('has_won', False)
 
-        # delta mmr de la última partida
         mmr_url = (
             f"https://api.henrikdev.xyz/valorant/v2/mmr/"
             f"{REGION}/{NOMBRE.replace(' ', '%20')}/{TAG}?api_key={API_KEY}"
