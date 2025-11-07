@@ -1,7 +1,7 @@
 import time
 from typing import Optional
 import requests
-from .config import CLIENT_ID, CLIENT_SECRET, APP_TOKEN as CONFIG_APP_TOKEN
+from .config import CLIENT_ID, CLIENT_SECRET, APP_TOKEN as CONFIG_APP_TOKEN, USER_ACCESS_TOKEN
 
 APP_TOKEN = None
 APP_TOKEN_EXPIRY = 0
@@ -37,6 +37,17 @@ def _headers():
     }
 
 
+def _headers_user():
+    token = (USER_ACCESS_TOKEN or "").strip()
+    if not token:
+        # Esta llamada requiere token de usuario con permisos adecuados
+        raise RuntimeError("Falta TWITCH_USER_TOKEN/USER_ACCESS_TOKEN para consultar seguidores")
+    return {
+        "Client-ID": CLIENT_ID,
+        "Authorization": f"Bearer {token}",
+    }
+
+
 def get_user_id(login: str) -> Optional[str]:
     url = "https://api.twitch.tv/helix/users"
     params = {"login": login}
@@ -49,15 +60,16 @@ def get_user_id(login: str) -> Optional[str]:
 
 
 def get_follow_info(follower_id: str, channel_id: str):
-    url = "https://api.twitch.tv/helix/users/follows"
-    params = {"from_id": follower_id, "to_id": channel_id, "first": 1}
-    r = requests.get(url, headers=_headers(), params=params, timeout=10)
+    # La ruta 'users/follows' fue retirada; usar 'channels/followers'
+    url = "https://api.twitch.tv/helix/channels/followers"
+    params = {"broadcaster_id": channel_id, "user_id": follower_id, "first": 1}
+    r = requests.get(url, headers=_headers_user(), params=params, timeout=10)
     r.raise_for_status()
     data = r.json()
-    total = data.get("total", 0)
-    if total < 1:
+    items = data.get("data", [])
+    if not items:
         return None
-    follow = data.get("data", [])[0]
+    follow = items[0]
     return follow  # contiene followed_at
 
 

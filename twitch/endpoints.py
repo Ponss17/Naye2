@@ -62,6 +62,8 @@ def followage():
 
     try:
         info = get_follow_info(follower_id, channel_id)
+    except RuntimeError as e:
+        return Response(str(e), mimetype="text/plain", status=500)
     except requests.exceptions.HTTPError as e:
         status = getattr(e.response, "status_code", 500)
         msg = ""
