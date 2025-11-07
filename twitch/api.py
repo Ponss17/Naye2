@@ -1,7 +1,7 @@
 import time
 from typing import Optional
 import requests
-from .config import CLIENT_ID, CLIENT_SECRET
+from .config import CLIENT_ID, CLIENT_SECRET, APP_TOKEN as CONFIG_APP_TOKEN
 
 APP_TOKEN = None
 APP_TOKEN_EXPIRY = 0
@@ -30,9 +30,10 @@ def get_app_token():
 
 
 def _headers():
+    token = CONFIG_APP_TOKEN or get_app_token()
     return {
         "Client-ID": CLIENT_ID,
-        "Authorization": f"Bearer {get_app_token()}",
+        "Authorization": f"Bearer {token}",
     }
 
 
