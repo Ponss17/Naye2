@@ -1,6 +1,6 @@
 from flask import request, Response
 from datetime import datetime, timezone
-from .config import CHANNEL_LOGIN, CLIENT_ID, CLIENT_SECRET
+from .config import CHANNEL_LOGIN, CLIENT_ID, CLIENT_SECRET, USER_ACCESS_TOKEN
 from .api import get_user_id, get_follow_info, get_app_token, validate_token
 import requests
 
@@ -173,6 +173,37 @@ def status():
             lines.append("Token: no se pudo validar (problema de red)")
         except Exception:
             lines.append("Token: error inesperado al validar")
+
+    # Validar token de usuario (si está configurado)
+    user_tok = (USER_ACCESS_TOKEN or "").strip()
+    if not user_tok:
+        lines.append("")
+        lines.append("Token usuario: (no configurado) -> define TWITCH_USER_TOKEN")
+    else:
+        try:
+            info = validate_token(user_tok)
+            client_id = info.get("client_id", "")
+            user_id = info.get("user_id")
+            expires_in = info.get("expires_in")
+            scopes = info.get("scopes", [])
+            has_followers = "moderator:read:followers" in scopes
+            lines.append("")
+            lines.append("Token usuario: presente")
+            lines.append(f"Token usuario client_id: {client_id}")
+            lines.append(f"Token usuario user_id: {user_id}")
+            lines.append(f"Token usuario expires_in: {expires_in}s")
+            lines.append(f"Token usuario scopes: {', '.join(scopes) if scopes else '(sin scopes)'}")
+            lines.append(f"Scope requerido moderator:read:followers: {'OK' if has_followers else 'FALTA'}")
+        except requests.exceptions.HTTPError as e:
+            status = getattr(e.response, "status_code", 500)
+            lines.append("")
+            lines.append(f"Token usuario: error HTTP {status} al validar")
+        except requests.exceptions.RequestException:
+            lines.append("")
+            lines.append("Token usuario: no se pudo validar (problema de red)")
+        except Exception:
+            lines.append("")
+            lines.append("Token usuario: error inesperado al validar")
 
     body = "\n".join(lines) + "\n"
     return Response(body, mimetype="text/plain")
