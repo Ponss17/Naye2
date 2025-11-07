@@ -2,6 +2,7 @@ from flask import request, Response
 from datetime import datetime, timezone
 from .config import CHANNEL_LOGIN, CLIENT_ID, CLIENT_SECRET
 from .api import get_user_id, get_follow_info
+import requests
 
 
 def _humanize_duration(delta_seconds: float) -> str:
@@ -44,14 +45,27 @@ def followage():
     if not CLIENT_ID or not CLIENT_SECRET:
         return Response("Faltan TWITCH_CLIENT_ID y/o TWITCH_CLIENT_SECRET.", mimetype="text/plain", status=500)
 
-    follower_id = get_user_id(user_login)
-    channel_id = get_user_id(channel_login)
+    try:
+        follower_id = get_user_id(user_login)
+        channel_id = get_user_id(channel_login)
+    except requests.exceptions.HTTPError as e:
+        return Response("Error al autenticar con Twitch (Client ID/Secret). Verifica tus credenciales.", mimetype="text/plain", status=500)
+    except requests.exceptions.RequestException:
+        return Response("No se pudo contactar a la API de Twitch.", mimetype="text/plain", status=502)
+    except Exception:
+        return Response("Error inesperado al buscar usuarios en Twitch.", mimetype="text/plain", status=500)
+
     if not follower_id:
         return Response(f"No encontré al usuario '{user_login}'.", mimetype="text/plain", status=404)
     if not channel_id:
         return Response(f"No encontré el canal '{channel_login}'.", mimetype="text/plain", status=404)
 
-    info = get_follow_info(follower_id, channel_id)
+    try:
+        info = get_follow_info(follower_id, channel_id)
+    except requests.exceptions.RequestException:
+        return Response("No se pudo consultar el follow en Twitch.", mimetype="text/plain", status=502)
+    except Exception:
+        return Response("Error inesperado al consultar follow.", mimetype="text/plain", status=500)
     if not info:
         return Response(f"{user_login} no sigue a {channel_login}.", mimetype="text/plain")
 
