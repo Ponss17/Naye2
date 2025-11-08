@@ -10,7 +10,7 @@ Está hosteada en Render y puede mantenerse despierta con UptimeRobot.
  - `/twitch` → Índice de endpoints de Twitch.
 
 Nota sobre configuración de Twitch
-- Si quieres ver cómo configurar y usar Twitch (OAuth, tokens y endpoints), revisa `docs/twitch.md`.
+- Si quieres ver cómo configurar y usar Twitch (OAuth, tokens y endpoints), revisa [docs/twitch.md](./docs/twitch.md).
 
 ## 🔹 Valorant
 
