@@ -44,7 +44,8 @@ Ambos deben estar dados de alta para poder iniciar el flujo desde producción o 
   - Protegida por contraseña si defines `TWITCH_ENDPOINT_PASSWORD`.
 
 - `/twitch/status`
-  - Muestra configuración y valida tokens de app y usuario.
+  - Valida tokens de app y usuario sin exponer datos sensibles.
+  - Indica si el scope `moderator:read:followers` está presente.
 
 - `/twitch/followage?user=<login>`
   - Retorna desde cuándo `<login>` sigue al canal configurado.

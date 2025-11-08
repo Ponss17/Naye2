@@ -134,9 +134,9 @@ def token():
 def status():
     """
     Muestra información de configuración y validación del token de aplicación:
-    - Canal configurado y su ID
-    - client_id asociado al token
-    - scopes y expiración
+    - Canal configurado
+    - Estado de validez de tokens (sin mostrar datos sensibles)
+    - Presencia de scopes requeridos
     """
     lines = []
     lines.append("Estado de Twitch")
@@ -147,38 +147,25 @@ def status():
     if not channel_login:
         lines.append("Canal: (no configurado) -> define TWITCH_CHANNEL_LOGIN")
     else:
-        try:
-            cid = get_user_id(channel_login)
-            if cid:
-                lines.append(f"Canal: {channel_login} (id: {cid})")
-            else:
-                lines.append(f"Canal: {channel_login} (no encontrado)")
-        except Exception:
-            lines.append(f"Canal: {channel_login} (error al resolver id)")
+        # No mostramos el ID del canal para evitar datos innecesarios.
+        lines.append(f"Canal configurado: {channel_login}")
 
     # Valida el token de app
     if not CLIENT_ID or not CLIENT_SECRET:
-        lines.append("Token: no disponible (faltan CLIENT_ID/SECRET)")
+        lines.append("Token de app: no disponible (faltan CLIENT_ID/SECRET)")
     else:
         try:
             tok = get_app_token()
-            info = validate_token(tok)
-            client_id = info.get("client_id", "")
-            user_id = info.get("user_id")
-            expires_in = info.get("expires_in")
-            scopes = info.get("scopes", [])
-            lines.append(f"Token tipo: app (client_credentials)")
-            lines.append(f"Token client_id: {client_id}")
-            lines.append(f"Token user_id: {user_id}")
-            lines.append(f"Token expires_in: {expires_in}s")
-            lines.append(f"Token scopes: {', '.join(scopes) if scopes else '(sin scopes)'}")
+            # Validamos sin mostrar detalles del token.
+            validate_token(tok)
+            lines.append("Token de app: válido")
         except requests.exceptions.HTTPError as e:
             status = getattr(e.response, "status_code", 500)
-            lines.append(f"Token: error HTTP {status} al validar")
+            lines.append(f"Token de app: error HTTP {status} al validar")
         except requests.exceptions.RequestException:
-            lines.append("Token: no se pudo validar (problema de red)")
+            lines.append("Token de app: no se pudo validar (problema de red)")
         except Exception:
-            lines.append("Token: error inesperado al validar")
+            lines.append("Token de app: error inesperado al validar")
 
     # Valida el token de usuario (si está configurado)
     user_tok = (USER_ACCESS_TOKEN or "").strip()
@@ -188,17 +175,11 @@ def status():
     else:
         try:
             info = validate_token(user_tok)
-            client_id = info.get("client_id", "")
-            user_id = info.get("user_id")
-            expires_in = info.get("expires_in")
             scopes = info.get("scopes", [])
             has_followers = "moderator:read:followers" in scopes
             lines.append("")
             lines.append("Token usuario: presente")
-            lines.append(f"Token usuario client_id: {client_id}")
-            lines.append(f"Token usuario user_id: {user_id}")
-            lines.append(f"Token usuario expires_in: {expires_in}s")
-            lines.append(f"Token usuario scopes: {', '.join(scopes) if scopes else '(sin scopes)'}")
+            # Solo mostramos la verificación del scope requerido, sin exponer información sensible.
             lines.append(f"Scope requerido moderator:read:followers: {'OK' if has_followers else 'FALTA'}")
         except requests.exceptions.HTTPError as e:
             status = getattr(e.response, "status_code", 500)
