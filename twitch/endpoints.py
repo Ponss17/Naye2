@@ -232,16 +232,26 @@ def oauth_callback():
     <meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">
     <title>Acceso protegido</title>
     <style>
-      body { font-family: system-ui, sans-serif; padding: 24px; }
-      input { padding: 8px; font-size: 14px; }
-      button { padding: 8px 12px; font-size: 14px; }
+      :root { --bg: #0e0f12; --card: #1c1f24; --border: #30343a; --text: #eaeaea; --muted: #a8b0bd; --accent: #7c3aed; }
+      * { box-sizing: border-box; }
+      body { margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center; background: var(--bg); color: var(--text); font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Arial; padding: 24px; }
+      .card { width: 100%; max-width: 520px; background: var(--card); border: 1px solid var(--border); border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.4); padding: 24px; }
+      h1 { margin: 0 0 8px; font-size: 26px; }
+      p { margin: 8px 0; color: var(--muted); }
+      .row { display: flex; gap: 8px; align-items: center; margin-top: 12px; }
+      input { flex: 1; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--border); background: #111827; color: var(--text); }
+      button { padding: 10px 14px; border-radius: 10px; border: 1px solid var(--border); background: var(--accent); color: white; font-weight: 600; cursor: pointer; }
     </style>
   </head>
   <body>
-    <h1>Acceso protegido</h1>
-    <p>Ingresa la clave para acceder al callback.</p>
-    <input type=\"password\" id=\"pw\" placeholder=\"Contraseña\">
-    <button id=\"go\">Entrar</button>
+    <div class=\"card\">
+      <h1>Acceso protegido</h1>
+      <p>Ingresa la clave para acceder al callback.</p>
+      <div class=\"row\">
+        <input type=\"password\" id=\"pw\" placeholder=\"Contraseña\">
+        <button id=\"go\">Entrar</button>
+      </div>
+    </div>
     <script>
       (function(){
         const go = document.getElementById('go');
@@ -279,18 +289,49 @@ def oauth_callback():
     <meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">
     <title>OAuth Token</title>
     <style>
-      body { font-family: system-ui, sans-serif; padding: 24px; }
-      pre { background: #111; color: #0f0; padding: 16px; border-radius: 8px; overflow-x: auto; }
+      :root {
+        --bg: #0e0f12; --card: #1c1f24; --border: #30343a; --text: #eaeaea; --muted: #a8b0bd; --accent: #7c3aed;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center;
+        background: var(--bg); color: var(--text); font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Arial, \"Apple Color Emoji\", \"Segoe UI Emoji\";
+        padding: 24px;
+      }
+      .card {
+        width: 100%; max-width: 720px; background: var(--card); border: 1px solid var(--border);
+        border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.4); padding: 24px;
+      }
+      h1 { margin: 0 0 8px; font-size: 28px; }
+      p { margin: 8px 0; color: var(--muted); }
+      .row { display: flex; gap: 8px; align-items: center; margin-top: 8px; }
+      a.btn {
+        display: inline-block; text-decoration: none; background: var(--accent); color: white;
+        padding: 10px 14px; border-radius: 10px; font-weight: 600;
+      }
+      code { background: #111827; color: #f59e0b; padding: 2px 6px; border-radius: 6px; }
+      pre {
+        background: #0b0f14; color: #16a34a; padding: 16px; border-radius: 12px; overflow-x: auto;
+        border: 1px dashed #1f2937; margin: 12px 0 0;
+      }
+      .meta { display: grid; grid-template-columns: 1fr; gap: 8px; margin-top: 12px; }
+      .meta-item { background: #10151b; border: 1px solid #1f2530; border-radius: 12px; padding: 12px; }
+      .label { font-size: 12px; color: var(--muted); }
     </style>
   </head>
   <body>
-    <h1>Token de Usuario</h1>
-    <p>Si llegaste aquí desde Twitch OAuth, abajo verás tu <code>access_token</code>.</p>
-    <pre id=\"out\">Esperando datos del fragmento...</pre>
-    <h2>¿No ves el token?</h2>
-    <p>Inicia el flujo OAuth con tu <code>client_id</code> configurado: <strong>__CLIENT_ID__</strong></p>
-    <p>Redirect URI actual: <code>__REDIRECT_URI__</code></p>
-    <p><a href=\"__AUTH_URL__\">Autorizar con Twitch (implicit grant)</a></p>
+    <div class=\"card\">
+      <h1>Token de Usuario</h1>
+      <p>Si llegaste aquí desde Twitch OAuth, abajo verás tu <code>access_token</code>.</p>
+      <pre id=\"out\">Esperando datos del fragmento...</pre>
+      <div class=\"meta\">
+        <div class=\"meta-item\"><div class=\"label\">Client ID</div><div><code>__CLIENT_ID__</code></div></div>
+        <div class=\"meta-item\"><div class=\"label\">Redirect URI actual</div><div><code>__REDIRECT_URI__</code></div></div>
+      </div>
+      <div class=\"row\">
+        <a class=\"btn\" href=\"__AUTH_URL__\">Autorizar con Twitch (implicit grant)</a>
+      </div>
+    </div>
     <script>
       (function(){
         const hash = new URLSearchParams(window.location.hash.slice(1));
