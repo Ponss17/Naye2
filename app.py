@@ -7,10 +7,20 @@ from valorant.index import valorant_index
 from valorant.endpoints import rango, ultima_ranked
 from twitch.endpoints import followage, token, status, oauth_callback
 from twitch.index import twitch_index
+from common.response import text_response
+import logging
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
+import requests
+from common.http import get_session
 
 app = Flask(__name__, static_folder='img', static_url_path='/img')
 app.config['PREFERRED_URL_SCHEME'] = 'https'
 app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1)
+logging.basicConfig(level=logging.INFO)
+
+limiter = Limiter(get_remote_address, app=app, default_limits=["100 per minute"]) 
+_session = get_session()
 
 @app.route('/')
 def index():
@@ -94,15 +104,28 @@ def index():
 
 # Valorant
 app.add_url_rule('/valorant', view_func=valorant_index)
-app.add_url_rule('/valorant/rango', view_func=rango)
-app.add_url_rule('/valorant/ultima-ranked', view_func=ultima_ranked)
+app.add_url_rule('/valorant/rango', view_func=limiter.limit("30 per minute")(rango))
+app.add_url_rule('/valorant/ultima-ranked', view_func=limiter.limit("30 per minute")(ultima_ranked))
 
 # twitch
 app.add_url_rule('/twitch', view_func=twitch_index)
-app.add_url_rule('/twitch/followage', view_func=followage)
-app.add_url_rule('/twitch/token', view_func=token)
-app.add_url_rule('/twitch/status', view_func=status)
+app.add_url_rule('/twitch/followage', view_func=limiter.limit("60 per minute")(followage))
+app.add_url_rule('/twitch/token', view_func=limiter.limit("10 per minute")(token))
+app.add_url_rule('/twitch/status', view_func=limiter.limit("30 per minute")(status))
 app.add_url_rule('/oauth/callback', view_func=oauth_callback)
+
+@app.route('/healthz')
+def healthz():
+    try:
+        # Chequeo rápido a Henrik API (Valorant)
+        r1 = _session.get("https://api.henrikdev.xyz/valorant/version", timeout=2)
+        # Chequeo rápido a Twitch Validate (no requiere credenciales)
+        r2 = _session.get("https://dev.twitch.tv/docs/api/reference", timeout=2)
+        if r1.status_code < 500 and r2.status_code < 500:
+            return text_response("ok")
+        return text_response("degraded", 502)
+    except Exception:
+        return text_response("down", 502)
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))

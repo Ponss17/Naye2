@@ -4,6 +4,14 @@ from .config import CHANNEL_LOGIN, CLIENT_ID, CLIENT_SECRET, USER_ACCESS_TOKEN, 
 import urllib.parse
 from .api import get_user_id, get_follow_info, get_app_token, validate_token
 import requests
+import re
+import logging
+from common.response import text_response
+from common.http import get_session
+from common.cache import SimpleTTLCache
+
+_session = get_session()
+_cache = SimpleTTLCache(default_ttl=15)
 
 
 def _humanize_duration(delta_seconds: float) -> str:
@@ -40,31 +48,41 @@ def followage():
     channel_login = request.args.get("channel", "").strip().lower() or CHANNEL_LOGIN.lower()
 
     if not user_login:
-        return Response("Debes proporcionar ?user=<login> del usuario.", mimetype="text/plain", status=400)
+        return text_response("Debes proporcionar ?user=<login> del usuario.", 400)
+    if not re.fullmatch(r"^[A-Za-z0-9_]{1,32}$", user_login):
+        return text_response("'user' inválido. Usa A–Z, 0–9 y _.", 400)
     if not channel_login:
-        return Response("Falta configurar TWITCH_CHANNEL_LOGIN.", mimetype="text/plain", status=500)
+        return text_response("Falta configurar TWITCH_CHANNEL_LOGIN.", 500)
     if not CLIENT_ID or not CLIENT_SECRET:
-        return Response("Faltan TWITCH_CLIENT_ID y/o TWITCH_CLIENT_SECRET.", mimetype="text/plain", status=500)
+        return text_response("Faltan TWITCH_CLIENT_ID y/o TWITCH_CLIENT_SECRET.", 500)
+
+    cache_key = f"followage:{user_login}:{channel_login}"
+    cached = _cache.get(cache_key)
+    if cached:
+        return text_response(cached)
 
     try:
         follower_id = get_user_id(user_login)
         channel_id = get_user_id(channel_login)
     except requests.exceptions.HTTPError as e:
-        return Response("Error al autenticar con Twitch (Client ID/Secret). Verifica tus credenciales.", mimetype="text/plain", status=500)
+        logging.exception("HTTP error en followage get_user_id")
+        return text_response("Error al autenticar con Twitch (Client ID/Secret).", 500)
     except requests.exceptions.RequestException:
-        return Response("No se pudo contactar a la API de Twitch.", mimetype="text/plain", status=502)
+        logging.exception("Error de red en followage get_user_id")
+        return text_response("No se pudo contactar a la API de Twitch.", 502)
     except Exception:
-        return Response("Error inesperado al buscar usuarios en Twitch.", mimetype="text/plain", status=500)
+        logging.exception("Error inesperado en followage get_user_id")
+        return text_response("Error inesperado al buscar usuarios en Twitch.", 500)
 
     if not follower_id:
-        return Response(f"No encontré al usuario '{user_login}'.", mimetype="text/plain", status=404)
+        return text_response(f"No encontré al usuario '{user_login}'.", 404)
     if not channel_id:
-        return Response(f"No encontré el canal '{channel_login}'.", mimetype="text/plain", status=404)
+        return text_response(f"No encontré el canal '{channel_login}'.", 404)
 
     try:
         info = get_follow_info(follower_id, channel_id)
     except RuntimeError as e:
-        return Response(str(e), mimetype="text/plain", status=500)
+        return text_response(str(e), 500)
     except requests.exceptions.HTTPError as e:
         status = getattr(e.response, "status_code", 500)
         msg = ""
@@ -76,24 +94,28 @@ def followage():
                 msg = e.response.text[:200]
             except Exception:
                 msg = ""
-        return Response(f"Error de Twitch ({status}): {msg}", mimetype="text/plain", status=502)
+        return text_response(f"Error de Twitch ({status}): {msg}", 502)
     except requests.exceptions.RequestException as e:
-        return Response("No se pudo consultar el follow en Twitch.", mimetype="text/plain", status=502)
+        logging.exception("Error de red en followage get_follow_info")
+        return text_response("No se pudo consultar el follow en Twitch.", 502)
     except Exception:
-        return Response("Error inesperado al consultar follow.", mimetype="text/plain", status=500)
+        logging.exception("Error inesperado en followage get_follow_info")
+        return text_response("Error inesperado al consultar follow.", 500)
     if not info:
-        return Response(f"{user_login} no sigue a {channel_login}.", mimetype="text/plain")
+        return text_response(f"{user_login} no sigue a {channel_login}.")
 
     followed_at_str = info.get("followed_at")
     try:
         followed_at = datetime.fromisoformat(followed_at_str.replace("Z", "+00:00"))
     except Exception:
-        return Response("Error al interpretar fecha de follow.", mimetype="text/plain", status=500)
+        return text_response("Error al interpretar fecha de follow.", 500)
 
     now = datetime.now(timezone.utc)
     delta = (now - followed_at).total_seconds()
     human = _humanize_duration(delta)
-    return Response(f"{user_login} sigue a {channel_login} desde hace {human}.", mimetype="text/plain")
+    result = f"{user_login} sigue a {channel_login} desde hace {human}."
+    _cache.set(cache_key, result)
+    return text_response(result)
 
 
 def token():
@@ -106,13 +128,13 @@ def token():
     # Protección por contraseña
     pwd = request.args.get("password") or request.headers.get("X-Endpoint-Password")
     if (ENDPOINT_PASSWORD or "") and pwd != (ENDPOINT_PASSWORD or ""):
-        return Response("Acceso no autorizado. Proporcione ?password=<clave>.", mimetype="text/plain", status=403)
+        return text_response("Acceso no autorizado. Proporcione ?password=<clave>.", 403)
 
     if not CLIENT_ID or not CLIENT_SECRET:
-        return Response("Faltan TWITCH_CLIENT_ID y/o TWITCH_CLIENT_SECRET.", mimetype="text/plain", status=500)
+        return text_response("Faltan TWITCH_CLIENT_ID y/o TWITCH_CLIENT_SECRET.", 500)
     try:
         tok = get_app_token()
-        return Response(tok or "", mimetype="text/plain")
+        return text_response(tok or "")
     except requests.exceptions.HTTPError as e:
         status = getattr(e.response, "status_code", 500)
         msg = ""
@@ -124,11 +146,11 @@ def token():
                 msg = e.response.text[:200]
             except Exception:
                 msg = ""
-        return Response(f"Error de Twitch ({status}): {msg}", mimetype="text/plain", status=502)
+        return text_response(f"Error de Twitch ({status}): {msg}", 502)
     except requests.exceptions.RequestException:
-        return Response("No se pudo obtener el token desde Twitch.", mimetype="text/plain", status=502)
+        return text_response("No se pudo obtener el token desde Twitch.", 502)
     except Exception:
-        return Response("Error inesperado al generar token.", mimetype="text/plain", status=500)
+        return text_response("Error inesperado al generar token.", 500)
 
 
 def status():
@@ -190,7 +212,7 @@ def status():
             lines.append("Token usuario: error inesperado al validar")
 
     body = "\n".join(lines) + "\n"
-    return Response(body, mimetype="text/plain")
+    return text_response(body)
 
 
 def oauth_callback():
