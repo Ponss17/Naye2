@@ -1,6 +1,7 @@
 
-from flask import Flask, Response
+from flask import Flask, Response, url_for
 import os
+import urllib.parse
 from valorant.index import valorant_index
 from valorant.endpoints import rango, ultima_ranked
 from twitch.endpoints import followage, token, status
@@ -31,10 +32,13 @@ funcionando jiji, cualquier duda con ponsscito :)
 # OAuth callback simple para extraer access_token del fragmento
 @app.route('/oauth/callback')
 def oauth_callback():
+    redirect_uri = url_for('oauth_callback', _external=True)
     auth_url = (
         "https://id.twitch.tv/oauth2/authorize?client_id="
         + (CLIENT_ID or "")
-        + "&redirect_uri=https%3A%2F%2Fnaye2.onrender.com%2Foauth%2Fcallback&response_type=token&scope=moderator%3Aread%3Afollowers&force_verify=true"
+        + "&redirect_uri="
+        + urllib.parse.quote(redirect_uri, safe="")
+        + "&response_type=token&scope=moderator%3Aread%3Afollowers&force_verify=true"
     )
     html_template = """
 <!doctype html>
@@ -54,6 +58,7 @@ def oauth_callback():
     <pre id=\"out\">Esperando datos del fragmento...</pre>
     <h2>¿No ves el token?</h2>
     <p>Inicia el flujo OAuth con tu <code>client_id</code> configurado: <strong>__CLIENT_ID__</strong></p>
+    <p>Redirect URI actual: <code>__REDIRECT_URI__</code></p>
     <p><a href=\"__AUTH_URL__\">Autorizar con Twitch (implicit grant)</a></p>
     <script>
       (function(){
@@ -74,7 +79,10 @@ def oauth_callback():
 </html>
     """
     html = (
-        html_template.replace("__CLIENT_ID__", CLIENT_ID or "").replace("__AUTH_URL__", auth_url)
+        html_template
+        .replace("__CLIENT_ID__", CLIENT_ID or "")
+        .replace("__AUTH_URL__", auth_url)
+        .replace("__REDIRECT_URI__", redirect_uri)
     )
     return Response(html, mimetype="text/html")
 
