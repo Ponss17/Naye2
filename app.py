@@ -58,7 +58,7 @@ def index():
       <div class=\"grid\">
         <div class=\"item\">
           <div class=\"title\">
-            <img src=\"{url_for('static', filename='valorant/valorant.webp')}\" alt=\"Valorant\" loading=\"lazy\" />
+            <img src=\"{url_for('static', filename='valorant/Valorant-Logo-text.webp')}\" alt=\"Valorant\" loading=\"lazy\" />
             <a href=\"{v_index}\">Valorant</a>
           </div>
           <ul>
@@ -72,7 +72,7 @@ def index():
 
         <div class=\"item\"> 
           <div class=\"title\">
-            <img src=\"{url_for('static', filename='twitch/twitch.webp')}\" alt=\"Twitch\" loading=\"lazy\" />
+            <img src=\"{url_for('static', filename='twitch/Twitch_logo_letra.webp')}\" alt=\"Twitch\" loading=\"lazy\" />
             <a href=\"{t_index}\">Twitch</a>
           </div>
           <ul>
