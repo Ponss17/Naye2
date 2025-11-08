@@ -17,6 +17,8 @@ services:
         sync: false
       - key: TWITCH_USER_TOKEN
         sync: false
+      - key: TWITCH_ENDPOINT_PASSWORD
+        sync: false
     healthCheckPath: /
     plan: free
     region: oregon

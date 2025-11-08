@@ -6,7 +6,7 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 from valorant.index import valorant_index
 from valorant.endpoints import rango, ultima_ranked
 from twitch.endpoints import followage, token, status
-from twitch.config import CLIENT_ID
+from twitch.config import CLIENT_ID, ENDPOINT_PASSWORD
 
 app = Flask(__name__)
 # Preferir https en URLs externas y respetar cabeceras de proxy
@@ -36,6 +36,42 @@ funcionando jiji, cualquier duda con ponsscito :)
 # OAuth callback simple para extraer access_token del fragmento de URL
 @app.route('/oauth/callback')
 def oauth_callback():
+    # Protección por contraseña
+    pwd = request.args.get("password") or request.headers.get("X-Endpoint-Password")
+    if (ENDPOINT_PASSWORD or "") and pwd != (ENDPOINT_PASSWORD or ""):
+        unauthorized = """
+<!doctype html>
+<html>
+  <head>
+    <meta charset=\"utf-8\">
+    <meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">
+    <title>Acceso protegido</title>
+    <style>
+      body { font-family: system-ui, sans-serif; padding: 24px; }
+      input { padding: 8px; font-size: 14px; }
+      button { padding: 8px 12px; font-size: 14px; }
+    </style>
+  </head>
+  <body>
+    <h1>Acceso protegido</h1>
+    <p>Ingresa la clave para acceder al callback.</p>
+    <input type=\"password\" id=\"pw\" placeholder=\"Contraseña\">
+    <button id=\"go\">Entrar</button>
+    <script>
+      (function(){
+        const go = document.getElementById('go');
+        go.addEventListener('click', function(){
+          const pw = document.getElementById('pw').value;
+          const url = new URL(window.location.href);
+          url.searchParams.set('password', pw);
+          window.location.href = url.toString();
+        });
+      })();
+    </script>
+  </body>
+</html>
+        """
+        return Response(unauthorized, mimetype="text/html", status=401)
     redirect_uri = url_for('oauth_callback', _external=True)
     # Forzar https en Render si el proxy no indica correctamente el esquema
     host = request.host or ""

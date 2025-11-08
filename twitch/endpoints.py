@@ -1,6 +1,6 @@
 from flask import request, Response
 from datetime import datetime, timezone
-from .config import CHANNEL_LOGIN, CLIENT_ID, CLIENT_SECRET, USER_ACCESS_TOKEN
+from .config import CHANNEL_LOGIN, CLIENT_ID, CLIENT_SECRET, USER_ACCESS_TOKEN, ENDPOINT_PASSWORD
 from .api import get_user_id, get_follow_info, get_app_token, validate_token
 import requests
 
@@ -102,6 +102,11 @@ def token():
 
     Seguridad: este token otorga acceso de app. No lo expongas públicamente.
     """
+    # Protección por contraseña
+    pwd = request.args.get("password") or request.headers.get("X-Endpoint-Password")
+    if (ENDPOINT_PASSWORD or "") and pwd != (ENDPOINT_PASSWORD or ""):
+        return Response("Acceso no autorizado. Proporcione ?password=<clave>.", mimetype="text/plain", status=403)
+
     if not CLIENT_ID or not CLIENT_SECRET:
         return Response("Faltan TWITCH_CLIENT_ID y/o TWITCH_CLIENT_SECRET.", mimetype="text/plain", status=500)
     try:
