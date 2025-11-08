@@ -1,5 +1,5 @@
 
-from flask import Flask, Response
+from flask import Flask, Response, url_for
 import os
 import urllib.parse
 from werkzeug.middleware.proxy_fix import ProxyFix
@@ -15,23 +15,74 @@ app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1)
 
 @app.route('/')
 def index():
-    mensaje = """
-API de Nayecute
+    v_index = url_for('valorant_index')
+    t_index = url_for('twitch_index')
+    v_rango = url_for('rango')
+    v_ultima = url_for('ultima_ranked')
+    t_callback = url_for('oauth_callback')
+    t_status = url_for('status')
+    t_follow = url_for('followage') + '?user=ponss17'
+    t_token = url_for('token')
+    html = f"""
+<!doctype html>
+<html>
+  <head>
+    <meta charset=\"utf-8\">
+    <meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">
+    <title>API de Nayecute</title>
+    <style>
+      :root {{ --bg: #0e0f12; --card: #1c1f24; --border: #30343a; --text: #eaeaea; --muted: #a8b0bd; --accent: #7c3aed; --accent2: #ef4444; }}
+      * {{ box-sizing: border-box; }}
+      body {{ margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center; background: var(--bg); color: var(--text); font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Arial; padding: 24px; }}
+      .card {{ width: 100%; max-width: 980px; background: var(--card); border: 1px solid var(--border); border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.4); padding: 24px; }}
+      h1 {{ margin: 0 0 12px; font-size: 28px; }}
+      p {{ margin: 8px 0; color: var(--muted); }}
+      .grid {{ display: grid; grid-template-columns: 1fr; gap: 12px; margin-top: 12px; }}
+      @media (min-width: 800px) {{ .grid {{ grid-template-columns: 1fr 1fr; }} }}
+      .item {{ background: #10151b; border: 1px solid #1f2530; border-radius: 12px; padding: 16px; }}
+      .title a {{ color: white; text-decoration: none; }}
+      .title a:hover {{ text-decoration: underline; }}
+      ul {{ margin: 8px 0 0; padding-left: 18px; color: var(--muted); }}
+      li {{ margin: 6px 0; }}
+      a.btn {{ display: inline-block; text-decoration: none; background: var(--accent); color: white; padding: 8px 12px; border-radius: 10px; font-weight: 600; }}
+      a.btn.red {{ background: var(--accent2); }}
+      .row {{ display: flex; gap: 8px; align-items: center; margin-top: 8px; flex-wrap: wrap; }}
+    </style>
+  </head>
+  <body>
+    <div class=\"card\">
+      <h1>API de Nayecute</h1>
+      <p>Selecciona una sección para ver sus endpoints y ejemplos.</p>
+      <div class=\"grid\">
+        <div class=\"item\">
+          <div class=\"title\"><a href=\"{v_index}\">Valorant</a></div>
+          <ul>
+            <li><a href=\"{v_rango}\">/valorant/rango</a> — rango actual, puntos y MMR</li>
+            <li><a href=\"{v_ultima}\">/valorant/ultima-ranked</a> — última partida (mapa, agente, KDA, resultado)</li>
+          </ul>
+          <div class=\"row\">
+            <a class=\"btn red\" href=\"{v_index}\">Ir al índice de Valorant</a>
+          </div>
+        </div>
 
- Endpoints disponibles:
-
- /valorant
-     Muestra los endpoints disponibles para Valorant(solo esos momentaneamente).
-
-/valorant/rango
-     Muestra el rango actual, puntos y cambio de MMR
-
-/valorant/ultima-ranked
-     Detalles de la última partida ranked (mapa, agente, KDA y resultado)
-
-funcionando jiji, cualquier duda con ponsscito :)
-"""
-    return Response(mensaje, mimetype="text/plain")
+        <div class=\"item\">
+          <div class=\"title\"><a href=\"{t_index}\">Twitch</a></div>
+          <ul>
+            <li><a href=\"{t_callback}\">/oauth/callback</a> — flujo implícito para obtener access_token</li>
+            <li><a href=\"{t_status}\">/twitch/status</a> — validar tokens y configuración</li>
+            <li><a href=\"{t_follow}\">/twitch/followage?user=ponss17</a> — followage de un usuario de ejemplo</li>
+            <li><a href=\"{t_token}\">/twitch/token</a> — app token (protegido)</li>
+          </ul>
+          <div class=\"row\">
+            <a class=\"btn\" href=\"{t_index}\">Ir al índice de Twitch</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>
+    """
+    return Response(html, mimetype="text/html")
 
 
 # Valorant
