@@ -31,8 +31,12 @@ funcionando jiji, cualquier duda con ponsscito :)
 # OAuth callback simple para extraer access_token del fragmento
 @app.route('/oauth/callback')
 def oauth_callback():
-    auth_url = f"https://id.twitch.tv/oauth2/authorize?client_id={CLIENT_ID}&redirect_uri=https%3A%2F%2Fnaye2.onrender.com%2Foauth%2Fcallback&response_type=token&scope=moderator%3Aread%3Afollowers&force_verify=true"
-    html = """
+    auth_url = (
+        "https://id.twitch.tv/oauth2/authorize?client_id="
+        + (CLIENT_ID or "")
+        + "&redirect_uri=https%3A%2F%2Fnaye2.onrender.com%2Foauth%2Fcallback&response_type=token&scope=moderator%3Aread%3Afollowers&force_verify=true"
+    )
+    html_template = """
 <!doctype html>
 <html>
   <head>
@@ -49,8 +53,8 @@ def oauth_callback():
     <p>Si llegaste aquí desde Twitch OAuth, abajo verás tu <code>access_token</code>.</p>
     <pre id=\"out\">Esperando datos del fragmento...</pre>
     <h2>¿No ves el token?</h2>
-    <p>Inicia el flujo OAuth con tu <code>client_id</code> configurado: <strong>""" + CLIENT_ID + """</strong></p>
-    <p><a href=\""" + auth_url + """\">Autorizar con Twitch (implicit grant)</a></p>
+    <p>Inicia el flujo OAuth con tu <code>client_id</code> configurado: <strong>__CLIENT_ID__</strong></p>
+    <p><a href=\"__AUTH_URL__\">Autorizar con Twitch (implicit grant)</a></p>
     <script>
       (function(){
         const hash = new URLSearchParams(window.location.hash.slice(1));
@@ -69,6 +73,9 @@ def oauth_callback():
   </body>
 </html>
     """
+    html = (
+        html_template.replace("__CLIENT_ID__", CLIENT_ID or "").replace("__AUTH_URL__", auth_url)
+    )
     return Response(html, mimetype="text/html")
 
 # Valorant
