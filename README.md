@@ -41,6 +41,7 @@ Nota sobre configuración de Twitch
 ```python
 🎀💕 Mi última ranked fue en Split con Omen, mi KDA fue 11/9/5. empatamos y no cambié de puntos 😐
 ```
+- Los mensajes se pueden modificar
 
 ## 🔹 Variables necesarias
 
