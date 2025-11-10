@@ -6,6 +6,7 @@ from .api import get_user_id, get_follow_info, get_app_token, validate_token
 import requests
 import re
 import logging
+import random
 from common.response import text_response
 from common.http import get_session
 from common.cache import SimpleTTLCache
@@ -116,6 +117,45 @@ def followage():
     result = f"{user_login} sigue a {channel_login} desde hace {human}."
     _cache.set(cache_key, result)
     return text_response(result)
+
+# duelo(prueba)
+def duelo():
+    """
+    Genera una narrativa de duelo entre quien usa el comando y quien es etiquetado.
+
+    Parámetros:
+      - ?user: login/nombre de quien usa el comando
+      - ?target (o ?tag): login/nombre de la persona etiquetada
+
+    Respuesta: texto plano con 5 líneas describiendo el duelo y el ganador.
+    """
+    user = (request.args.get("user") or "").strip()
+    target = (request.args.get("target") or request.args.get("tag") or "").strip()
+
+    if not user or not target:
+        return text_response("Debes proporcionar ?user=<quien usa el comando> y ?target=<etiquetado>.", 400)
+
+    # Permite letras, números y guiones bajos; quita '@' inicial si viene de menciones
+    if target.startswith("@"):
+        target = target[1:]
+    name_re = r"^[A-Za-z0-9_]{1,32}$"
+    if not re.fullmatch(name_re, user):
+        return text_response("'user' inválido. Usa A–Z, 0–9 y _.", 400)
+    if not re.fullmatch(name_re, target):
+        return text_response("'target' inválido. Usa A–Z, 0–9 y _.", 400)
+
+    first = random.choice([user, target])
+    second = target if first == user else user
+    winner = random.choice([user, target])
+
+    lines = [
+        f"{user} ha retado a un duelo a muerte a {target}.",
+        f"El duelo se nota tenso, {first} golpea primero.",
+        f"{second} no se queda atrás y golpea también.",
+        "El duelo está muy reñido, no se sabe quién ganará.",
+        f"{winner} ha ganado, fue un duro combate pero se llevó la victoria."
+    ]
+    return text_response("\n".join(lines))
 
 
 def token():
