@@ -20,7 +20,15 @@ Guías técnicas:
   - `/twitch/followage?user=<login>` → Desde cuándo `<login>` sigue al canal configurado.
   - `/twitch/token` → Genera app token (protegido).
 
-• Guía completa de Twitch: [docs/twitch.md](./docs/twitch.md)
+## 🔹 Twitch (resumen)
+
+- OAuth implícito: `/oauth/callback` para obtener `access_token` de usuario (opcionalmente protegido con `ENDPOINT_PASSWORD`).
+- Endpoints:
+  - `/twitch/status` → valida tokens y muestra configuración.
+  - `/twitch/followage?user=<login>` → desde cuándo `<login>` sigue al canal.
+  - `/twitch/token` → genera app token (puede estar protegido).
+- Variables: `TWITCH_CLIENT_ID`, `TWITCH_CLIENT_SECRET`, `TWITCH_CHANNEL_LOGIN`, `TWITCH_USER_TOKEN`, `TWITCH_ENDPOINT_PASSWORD`.
+- Guía completa: [docs/twitch.md](./docs/twitch.md).
 
 ## 🔹 Valorant (resumen)
 
@@ -76,18 +84,6 @@ Se obtiene automáticamente:
 - 3  Configura la variable `API_KEY` con tu clave de HenrikDev  
 - 4  ¡Listo! Tu API estará en línea
 
-## 🌙 Mantener la API despierta
-
-- Render Free apaga servicios si no reciben visitas  
-- Usa UptimeRobot para hacer ping cada 5 minutos y mantenerla activa
-
-## 🏁Final
-
-- Hecho con cariño para [naye](https://www.twitch.tv/nayecutee)  ❤️ 
-- Usando la API de [henrikdev](https://docs.henrikdev.xyz/)  para traer datos oficiales de Valorant. 
-
-- Puedes usarla libremente y adaptarla para otros jugadores cambiando los datos de arriba (en `valorant/config.py`), siempre que mantengas los créditos a mi repositorio original :).
-
 ## 🔒 Seguridad y límites
 
 - Cabeceras globales: `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `Content-Security-Policy`.
@@ -99,3 +95,15 @@ Se obtiene automáticamente:
 - Instalar dependencias: `pip install -r requirements.txt`.
 - Arrancar: `python app.py` (en `http://127.0.0.1:5000`).
 - Índices: `/`, `/valorant`, `/twitch`.
+
+## 🌙 Mantener la API despierta
+
+- Render Free apaga servicios si no reciben visitas  
+- Usa UptimeRobot para hacer ping cada 5 minutos y mantenerla activa
+
+## 🏁Final
+
+- Hecho con cariño para [naye](https://www.twitch.tv/nayecutee)  ❤️ 
+- Usando la API de [henrikdev](https://docs.henrikdev.xyz/)  para traer datos oficiales de Valorant. 
+
+- Puedes usarla libremente y adaptarla para otros jugadores cambiando los datos de arriba (en `valorant/config.py`), siempre que mantengas los créditos a mi repositorio original :).
