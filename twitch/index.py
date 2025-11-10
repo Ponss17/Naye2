@@ -31,7 +31,7 @@ def twitch_index():
   </head>
   <body>
     <div class=\"card\">
-      <h1>Endpoints de Twitch</h1>
+      <h1><img src=\"{url_for('static', filename='twitch/twitch.webp')}\" alt=\"Twitch\" loading=\"lazy\" style=\"height:32px;width:auto;vertical-align:middle;margin-right:8px;border-radius:6px;\" />Endpoints de Twitch</h1>
       <p>Listado de rutas disponibles y ejemplos de uso.</p>
       <div class=\"grid\">
         <div class=\"item\">
