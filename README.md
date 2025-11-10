@@ -1,21 +1,36 @@
 # ♥️ API de Nayecute
 
-Esta es una API en Flask que muestra el **rango actual de Valorant** de [Naye](https://www.twitch.tv/nayecutee) usando la API de [henrikdev](https://docs.henrikdev.xyz/).  
-Está hosteada en Render y puede mantenerse despierta con UptimeRobot.
+API en Flask con endpoints para Valorant y Twitch, desplegada en Render. Incluye caché con TTL, sesión HTTP con reintentos, cabeceras de seguridad globales y `Flask-Limiter` para rate limiting.
+
+Guías técnicas:
+- Valorant: `common/valorant.md`
+- Render y healthcheck: `common/render.md`
+- Twitch: `docs/twitch.md`
 
 ## 🔹 Endpoints
 
-- `/` → Muestra un mensaje de bienvenida con la lista de endpoints disponibles.
-- `/valorant` → Índice de endpoints específicos de Valorant.
- - `/twitch` → Índice de endpoints de Twitch.
+- `/` → Índice general con accesos a Valorant y Twitch.
+- `/valorant` → Índice de endpoints de Valorant.
+  - `/valorant/rango` → Rango actual, puntos y cambio de MMR.
+  - `/valorant/ultima-ranked` → Última partida (mapa, agente, KDA, resultado).
+- `/twitch` → Índice de endpoints de Twitch.
+  - `/oauth/callback` → Flujo OAuth implícito para obtener `access_token` (protegido opcionalmente).
+  - `/twitch/status` → Valida tokens y configuración.
+  - `/twitch/followage?user=<login>` → Desde cuándo `<login>` sigue al canal.
+  - `/twitch/token` → Genera app token (protegido).
 
-Nota sobre configuración de Twitch
-- Si quieres ver cómo configurar y usar Twitch (OAuth, tokens y endpoints), revisa [docs/twitch.md](./docs/twitch.md).
+• Guía completa de Twitch: [docs/twitch.md](./docs/twitch.md)
 
-## 🔹 Valorant
+## 🔹 Valorant (resumen)
 
-- `/rango` → Devuelve el **rango actual, puntos, cambio de MMR y último agente jugado**.
-- `/ultima-ranked` → Devuelve detalles de la **última partida ranked** (mapa, agente, KDA y resultado).
+- Fuente: API de HenrikDev (`/v2/mmr` y `/v3/matches`).
+- Configuración: `valorant/config.py` (`NOMBRE`, `TAG`, `REGION`, `API_KEY`).
+- Caché: `SimpleTTLCache` con TTL por defecto de `VALORANT_CACHE_TTL=15s`.
+- Sesión HTTP: reintentos con backoff y `keep-alive` mediante `common/http.get_session()`.
+
+Endpoints:
+- `/valorant/rango` → rango actual, puntos, cambio de MMR y último agente.
+- `/valorant/ultima-ranked` → mapa, agente, KDA, resultado y delta MMR.
 
 ### Ejemplos de respuesta:
 
@@ -41,12 +56,13 @@ Nota sobre configuración de Twitch
 ```python
 🎀💕 Mi última ranked fue en Split con Omen, mi KDA fue 11/9/5. empatamos y no cambié de puntos 😐
 ```
-- Los mensajes se pueden modificar
+- Los mensajes se pueden modificar.
 
 ## 🔹 Variables necesarias
 
-- `API_KEY` → Tu API key de HenrikDev  
-- `PORT` → Render lo maneja automáticamente
+- Generales: `PORT` (Render lo maneja), `API_USER_AGENT` (opcional, UA HTTP).
+- Valorant: `API_KEY` (HenrikDev), `VALORANT_CACHE_TTL` (TTL en segundos, por defecto 15).
+- Twitch: ver [docs/twitch.md](./docs/twitch.md).
 
 ## 🔹 Personalizar para otro jugador
 
@@ -67,10 +83,12 @@ Se obtiene automáticamente:
 - **Rango y puntos** desde `/v2/mmr/{region}/{name}/{tag}`  
 - **Último agente** desde la última partida competitiva usando `/by-puuid/...`
 
-## 🔹 Despliegue en Render
+## 🔹 Despliegue en Render (resumen)
 
-- `render.yaml` → Configuración automática para Render  
-- Guía completa: [DEPLOY_RENDER.md](./DEPLOY_RENDER.md)
+- Archivo: `render.yaml` (service `web` con healthcheck en `/healthz`).
+- Healthcheck: `/healthz` verifica rápidamente dependencias externas (HenrikDev y doc de Twitch).
+- Env vars: `API_KEY`, y las de Twitch si usas esa sección.
+- Guía técnica ampliada: `common/render.md`.
 
 ## 🚀 Despliegue rápido
 
@@ -90,3 +108,15 @@ Se obtiene automáticamente:
 - Usando la API de [henrikdev](https://docs.henrikdev.xyz/)  para traer datos oficiales de Valorant. 
 
 - Puedes usarla libremente y adaptarla para otros jugadores cambiando los datos de arriba (en `valorant/config.py`), siempre que mantengas los créditos a mi repositorio original :).
+
+## 🔒 Seguridad y límites
+
+- Cabeceras globales: `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `Content-Security-Policy`.
+- No cache en endpoints sensibles (OAuth/token): `Cache-Control: no-store`.
+- Rate limiting con `Flask-Limiter` por endpoint.
+
+## 🧪 Desarrollo local
+
+- Instalar dependencias: `pip install -r requirements.txt`.
+- Arrancar: `python app.py` (en `http://127.0.0.1:5000`).
+- Índices: `/`, `/valorant`, `/twitch`.
