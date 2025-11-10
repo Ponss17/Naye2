@@ -9,14 +9,15 @@ Guías técnicas:
 
 ## 🔹 Endpoints
 
-- `/` → Índice general con accesos a Valorant y Twitch.
-- `/valorant` → Índice de endpoints de Valorant.
-  - `/valorant/rango` → Rango actual, puntos y cambio de MMR.
-  - `/valorant/ultima-ranked` → Última partida (mapa, agente, KDA, resultado).
-- `/twitch` → Índice de endpoints de Twitch.
-  - `/oauth/callback` → Flujo OAuth implícito para obtener `access_token` (protegido opcionalmente).
-  - `/twitch/status` → Valida tokens y configuración.
-  - `/twitch/followage?user=<login>` → Desde cuándo `<login>` sigue al canal.
+- `/` → Índice HTML con accesos a Valorant y Twitch.
+- `/healthz` → Healthcheck del servicio (ok/degraded/down según dependencias externas).
+- `/valorant` → Índice de Valorant.
+  - `/valorant/rango` → Rango actual en ES, puntos y cambio de MMR; incluye último agente.
+  - `/valorant/ultima-ranked` → Última partida (mapa, agente, KDA, resultado y delta MMR).
+- `/twitch` → Índice de Twitch.
+  - `/oauth/callback` → Completa OAuth implícito para obtener `access_token` (opcionalmente protegido).
+  - `/twitch/status` → Valida tokens de app/usuario y muestra configuración.
+  - `/twitch/followage?user=<login>` → Desde cuándo `<login>` sigue al canal configurado.
   - `/twitch/token` → Genera app token (protegido).
 
 • Guía completa de Twitch: [docs/twitch.md](./docs/twitch.md)
