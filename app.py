@@ -71,7 +71,10 @@ def index():
   </head>
   <body>
     <div class=\"card\">
-      <h1>API de Nayecute</h1>
+      <div class=\"title\">
+        <img src=\"{url_for('static', filename='user/naye_icon.webp')}\" alt=\"Naye\" loading=\"lazy\" />
+        <h1>API de Nayecute</h1>
+      </div>
       <p>Selecciona una sección para ver sus endpoints y ejemplos.</p>
       <div class=\"grid\">
         <div class=\"item\">
