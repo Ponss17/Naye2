@@ -221,6 +221,67 @@ def oauth_callback():
     Muestra el token de usuario si llega en el fragmento (#access_token=...).
     Protegida con contraseña configurable.
     """
+    # Soporte de cierre de sesión del callback: borra la cookie y muestra login
+    if (request.args.get("logout") or "").lower() in ("1", "true", "yes"): 
+        unauthorized = """
+<!doctype html>
+<html>
+  <head>
+    <meta charset=\"utf-8\">
+    <meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">
+    <title>Acceso protegido</title>
+    <style>
+      :root { --bg: #0e0f12; --card: #1c1f24; --border: #30343a; --text: #eaeaea; --muted: #a8b0bd; --accent: #7c3aed; }
+      * { box-sizing: border-box; }
+      body { margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center; background: var(--bg); color: var(--text); font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Arial; padding: 24px; }
+      .card { width: 100%; max-width: 520px; background: var(--card); border: 1px solid var(--border); border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.4); padding: 24px; }
+      h1 { margin: 0 0 8px; font-size: 26px; }
+      p { margin: 8px 0; color: var(--muted); }
+      .row { display: flex; gap: 8px; align-items: center; margin-top: 12px; }
+      input { flex: 1; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--border); background: #111827; color: var(--text); }
+      button { padding: 10px 14px; border-radius: 10px; border: 1px solid var(--border); background: var(--accent); color: white; font-weight: 600; cursor: pointer; }
+    </style>
+  </head>
+  <body>
+    <div class=\"card\">
+      <h1>Acceso protegido</h1>
+      <p>Ingresa la clave para acceder al callback.</p>
+      <div class=\"row\">
+        <input type=\"password\" id=\"pw\" placeholder=\"Contraseña\" autocomplete=\"current-password\">
+        <button id=\"go\">Entrar</button>
+      </div>
+    </div>
+    <script>
+      (function(){
+        const pwInput = document.getElementById('pw');
+        const go = document.getElementById('go');
+        function submitPwd(){
+          const pw = pwInput.value.trim();
+          const url = new URL(window.location.href);
+          url.searchParams.delete('logout');
+          url.searchParams.set('password', pw);
+          window.location.href = url.toString();
+        }
+        go.addEventListener('click', submitPwd);
+        pwInput.addEventListener('keydown', function(e){ if (e.key === 'Enter') submitPwd(); });
+        setTimeout(function(){ pwInput.focus(); pwInput.select && pwInput.select(); }, 10);
+      })();
+    </script>
+  </body>
+</html>
+        """
+        resp = Response(unauthorized, mimetype="text/html")
+        # Borra cookie de acceso recordado
+        try:
+            host = request.host or ""
+            xfp = (request.headers.get('X-Forwarded-Proto') or '').split(',')[0].strip()
+            secure = ('onrender.com' in host and xfp == 'https') or request.is_secure
+            resp.delete_cookie('endpoint_pwd', secure=secure, httponly=True, samesite='Lax')
+        except Exception:
+            pass
+        resp.headers['Cache-Control'] = 'no-store'
+        return resp
+
     # Protección por contraseña (acepta POST, query, header y cookie). Normaliza espacios.
     raw_pwd = (request.form.get("password") if request.method == "POST" else None) \
         or request.args.get("password") \
@@ -267,13 +328,11 @@ def oauth_callback():
         function submitPwd(){
           const pw = pwInput.value.trim();
           const url = new URL(window.location.href);
-          // Preserva el fragmento #access_token devolviendo a la misma URL
           url.searchParams.set('password', pw);
           window.location.href = url.toString();
         }
         go.addEventListener('click', submitPwd);
         pwInput.addEventListener('keydown', function(e){ if (e.key === 'Enter') submitPwd(); });
-        // Enfocar el campo para facilitar el reintento
         setTimeout(function(){ pwInput.focus(); pwInput.select && pwInput.select(); }, 10);
       })();
     </script>
@@ -347,6 +406,7 @@ def oauth_callback():
       </div>
       <div class=\"row\">
         <a class=\"btn\" href=\"__AUTH_URL__\">Autorizar con Twitch (implicit grant)</a>
+        <a class=\"btn red\" href=\"__LOGOUT_URL__\">Cerrar sesión de callback</a>
       </div>
     </div>
     <script>
@@ -372,6 +432,7 @@ def oauth_callback():
         .replace("__CLIENT_ID__", CLIENT_ID or "")
         .replace("__AUTH_URL__", auth_url)
         .replace("__REDIRECT_URI__", redirect_uri)
+        .replace("__LOGOUT_URL__", redirect_uri + "?logout=1")
     )
     resp = Response(html, mimetype="text/html")
     # Recuerda acceso por 10 minutos para no pedir la contraseña tras el redirect de Twitch
