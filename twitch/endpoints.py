@@ -260,7 +260,7 @@ def oauth_callback():
         const go = document.getElementById('go');
         const pwInput = document.getElementById('pw');
         go.addEventListener('click', function(){
-          const pw = document.getElementById('pw').value;
+          const pw = document.getElementById('pw').value.trim();
           const url = new URL(window.location.href);
           url.searchParams.set('password', pw);
           window.location.href = url.toString();
