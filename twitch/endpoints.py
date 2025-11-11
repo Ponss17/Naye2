@@ -221,10 +221,11 @@ def oauth_callback():
     Muestra el token de usuario si llega en el fragmento (#access_token=...).
     Protegida con contraseña configurable.
     """
-    # Protección por contraseña (acepta POST, query y header). Normaliza espacios.
+    # Protección por contraseña (acepta POST, query, header y cookie). Normaliza espacios.
     raw_pwd = (request.form.get("password") if request.method == "POST" else None) \
         or request.args.get("password") \
-        or request.headers.get("X-Endpoint-Password")
+        or request.headers.get("X-Endpoint-Password") \
+        or request.cookies.get("endpoint_pwd")
     pwd = (raw_pwd or "").strip()
     expected = (ENDPOINT_PASSWORD or "").strip()
     if expected and pwd != expected:
@@ -363,5 +364,13 @@ def oauth_callback():
         .replace("__REDIRECT_URI__", redirect_uri)
     )
     resp = Response(html, mimetype="text/html")
+    # Recuerda acceso por 10 minutos para no pedir la contraseña tras el redirect de Twitch
+    try:
+        host = request.host or ""
+        xfp = (request.headers.get('X-Forwarded-Proto') or '').split(',')[0].strip()
+        secure = ('onrender.com' in host and xfp == 'https') or request.is_secure
+        resp.set_cookie('endpoint_pwd', expected, max_age=600, secure=secure, httponly=True, samesite='Lax')
+    except Exception:
+        pass
     resp.headers['Cache-Control'] = 'no-store'
     return resp
