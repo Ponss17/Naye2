@@ -176,7 +176,7 @@ def token():
       <p>Ingresa la clave para ver el app token.</p>
       <div class=\"row\">
         <input type=\"password\" id=\"pw\" placeholder=\"Contraseña\" autocomplete=\"current-password\">
-        <button id=\"go\">Entrar</button>
+        <button type=\"button\" id=\"go\">Entrar</button>
       </div>
     </div>
     <script>
@@ -339,7 +339,7 @@ def oauth_callback():
       <p>Ingresa la clave para acceder al callback.</p>
       <div class=\"row\">
         <input type=\"password\" id=\"pw\" placeholder=\"Contraseña\" autocomplete=\"current-password\">
-        <button id=\"go\">Entrar</button>
+        <button type=\"button\" id=\"go\">Entrar</button>
       </div>
     </div>
     <script>
@@ -431,7 +431,7 @@ def oauth_callback():
       __ERROR__
       <div class=\"row\">
         <input type=\"password\" id=\"pw\" placeholder=\"Contraseña\" autocomplete=\"current-password\">
-        <button id=\"go\">Entrar</button>
+        <button type=\"button\" id=\"go\">Entrar</button>
       </div>
     </div>
     <script>
