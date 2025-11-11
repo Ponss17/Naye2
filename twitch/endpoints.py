@@ -125,16 +125,107 @@ def token():
 
     Seguridad: este token otorga acceso de app. No lo expongas públicamente.
     """
-    # Protección por contraseña
-    pwd = request.args.get("password") or request.headers.get("X-Endpoint-Password")
-    if (ENDPOINT_PASSWORD or "") and pwd != (ENDPOINT_PASSWORD or ""):
-        return text_response("Acceso no autorizado. Proporcione ?password=<clave>.", 403)
+    # Protección por contraseña (normaliza espacios, acepta query/header/cookie y distingue origen)
+    pwd_source = None
+    raw_pwd = None
+    val = request.args.get("password")
+    if val is not None:
+        raw_pwd = val
+        pwd_source = "query"
+    if raw_pwd is None:
+        val = request.headers.get("X-Endpoint-Password")
+        if val is not None:
+            raw_pwd = val
+            pwd_source = "header"
+    if raw_pwd is None:
+        val = request.cookies.get("endpoint_pwd")
+        if val is not None:
+            raw_pwd = val
+            pwd_source = "cookie"
+
+    pwd = (raw_pwd or "").strip()
+    expected = (ENDPOINT_PASSWORD or "").strip()
+    if expected and pwd != expected:
+        # Intentos explícitos (query/header) → 401 con mensaje. Cookie inválida o sin intento → 200 con formulario.
+        explicit_attempt = pwd_source in ("query", "header") and bool((raw_pwd or "").strip())
+        if explicit_attempt:
+            return text_response("Acceso no autorizado. Proporcione ?password=<clave> o header X-Endpoint-Password.", 401)
+        # Formulario básico para acceso manual
+        html = """
+<!doctype html>
+<html>
+  <head>
+    <meta charset=\"utf-8\">
+    <meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">
+    <title>Token de aplicación (protegido)</title>
+    <style>
+      :root { --bg:#0e0f12; --card:#1c1f24; --border:#30343a; --text:#eaeaea; --muted:#a8b0bd; --accent:#7c3aed; }
+      * { box-sizing:border-box; }
+      body { margin:0; min-height:100vh; display:flex; align-items:center; justify-content:center; background:var(--bg); color:var(--text); font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Arial; padding:24px; }
+      .card { width:100%; max-width:520px; background:var(--card); border:1px solid var(--border); border-radius:16px; box-shadow:0 10px 30px rgba(0,0,0,0.4); padding:24px; }
+      h1 { margin:0 0 8px; font-size:24px; }
+      p { margin:8px 0; color:var(--muted); }
+      .row { display:flex; gap:8px; align-items:center; margin-top:12px; }
+      input { flex:1; padding:10px 12px; border-radius:10px; border:1px solid var(--border); background:#111827; color:var(--text); }
+      button { padding:10px 14px; border-radius:10px; border:1px solid var(--border); background:var(--accent); color:white; font-weight:600; cursor:pointer; }
+    </style>
+  </head>
+  <body>
+    <div class=\"card\">
+      <h1>Acceso protegido</h1>
+      <p>Ingresa la clave para ver el app token.</p>
+      <div class=\"row\">
+        <input type=\"password\" id=\"pw\" placeholder=\"Contraseña\" autocomplete=\"current-password\">
+        <button id=\"go\">Entrar</button>
+      </div>
+    </div>
+    <script>
+      (function(){
+        const pwInput = document.getElementById('pw');
+        const go = document.getElementById('go');
+        function submitPwd(){
+          const pw = pwInput.value.trim();
+          const url = new URL(window.location.href);
+          url.searchParams.set('password', pw);
+          window.location.replace(url.toString());
+        }
+        go.addEventListener('click', submitPwd);
+        pwInput.addEventListener('keydown', function(e){ if (e.key === 'Enter') submitPwd(); });
+        setTimeout(function(){ pwInput.focus(); pwInput.select && pwInput.select(); }, 10);
+      })();
+    </script>
+  </body>
+</html>
+        """
+        resp = Response(html, mimetype="text/html", status=200)
+        # Limpiar cookie inválida si existía
+        if pwd_source == "cookie":
+            try:
+                host = request.host or ""
+                xfp = (request.headers.get('X-Forwarded-Proto') or '').split(',')[0].strip()
+                secure = ('onrender.com' in host and xfp == 'https') or request.is_secure
+                resp.delete_cookie('endpoint_pwd', secure=secure, httponly=True, samesite='Lax')
+            except Exception:
+                pass
+        resp.headers['Cache-Control'] = 'no-store'
+        return resp
 
     if not CLIENT_ID or not CLIENT_SECRET:
         return text_response("Faltan TWITCH_CLIENT_ID y/o TWITCH_CLIENT_SECRET.", 500)
     try:
         tok = get_app_token()
-        return text_response(tok or "")
+        resp = text_response(tok or "")
+        # Recordar acceso por 10 minutos tras validación correcta
+        try:
+            host = request.host or ""
+            xfp = (request.headers.get('X-Forwarded-Proto') or '').split(',')[0].strip()
+            secure = ('onrender.com' in host and xfp == 'https') or request.is_secure
+            if expected:
+                resp.set_cookie('endpoint_pwd', expected, max_age=600, secure=secure, httponly=True, samesite='Lax')
+        except Exception:
+            pass
+        resp.headers['Cache-Control'] = 'no-store'
+        return resp
     except requests.exceptions.HTTPError as e:
         status = getattr(e.response, "status_code", 500)
         msg = ""
@@ -260,7 +351,10 @@ def oauth_callback():
           const url = new URL(window.location.href);
           url.searchParams.delete('logout');
           url.searchParams.set('password', pw);
-          window.location.href = url.toString();
+          const base = url.origin + url.pathname;
+          const search = url.searchParams.toString();
+          const next = base + (search ? ('?' + search) : '') + (window.location.hash || '');
+          window.location.replace(next);
         }
         go.addEventListener('click', submitPwd);
         pwInput.addEventListener('keydown', function(e){ if (e.key === 'Enter') submitPwd(); });
@@ -282,8 +376,6 @@ def oauth_callback():
         resp.headers['Cache-Control'] = 'no-store'
         return resp
 
-    # Protección por contraseña (acepta POST, query, header y cookie). Normaliza espacios.
-    # Determina la fuente para distinguir cookie inválida (no debe contar como intento) de intentos explícitos.
     pwd_source = None
     raw_pwd = None
     if request.method == "POST":
@@ -350,7 +442,10 @@ def oauth_callback():
           const pw = pwInput.value.trim();
           const url = new URL(window.location.href);
           url.searchParams.set('password', pw);
-          window.location.href = url.toString();
+          const base = url.origin + url.pathname;
+          const search = url.searchParams.toString();
+          const next = base + (search ? ('?' + search) : '') + (window.location.hash || '');
+          window.location.replace(next);
         }
         go.addEventListener('click', submitPwd);
         pwInput.addEventListener('keydown', function(e){ if (e.key === 'Enter') submitPwd(); });
