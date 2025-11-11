@@ -124,7 +124,7 @@ app.add_url_rule('/twitch', view_func=twitch_index)
 app.add_url_rule('/twitch/followage', view_func=limiter.limit("60 per minute")(followage))
 app.add_url_rule('/twitch/token', view_func=limiter.limit("10 per minute")(token))
 app.add_url_rule('/twitch/status', view_func=limiter.limit("30 per minute")(status))
-app.add_url_rule('/oauth/callback', view_func=oauth_callback)
+app.add_url_rule('/oauth/callback', view_func=oauth_callback, methods=['GET','POST'])
 
 @app.route('/healthz')
 def healthz():

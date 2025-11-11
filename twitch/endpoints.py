@@ -221,10 +221,14 @@ def oauth_callback():
     Muestra el token de usuario si llega en el fragmento (#access_token=...).
     Protegida con contraseña configurable.
     """
-    # Protección por contraseña
-    pwd = request.args.get("password") or request.headers.get("X-Endpoint-Password")
-    if (ENDPOINT_PASSWORD or "") and pwd != (ENDPOINT_PASSWORD or ""):
-        show_error = bool(pwd)
+    # Protección por contraseña (acepta POST, query y header). Normaliza espacios.
+    raw_pwd = (request.form.get("password") if request.method == "POST" else None) \
+        or request.args.get("password") \
+        or request.headers.get("X-Endpoint-Password")
+    pwd = (raw_pwd or "").strip()
+    expected = (ENDPOINT_PASSWORD or "").strip()
+    if expected and pwd != expected:
+        show_error = bool((raw_pwd or "").strip())
         unauthorized = """
 <!doctype html>
 <html>
@@ -250,24 +254,14 @@ def oauth_callback():
       <h1>Acceso protegido</h1>
       <p>Ingresa la clave para acceder al callback.</p>
       __ERROR__
-      <div class=\"row\">
-        <input type=\"password\" id=\"pw\" placeholder=\"Contraseña\">
-        <button id=\"go\">Entrar</button>
-      </div>
+      <form method=\"post\" class=\"row\">
+        <input type=\"password\" id=\"pw\" name=\"password\" placeholder=\"Contraseña\" autocomplete=\"current-password\">
+        <button id=\"go\" type=\"submit\">Entrar</button>
+      </form>
     </div>
     <script>
       (function(){
-        const go = document.getElementById('go');
         const pwInput = document.getElementById('pw');
-        go.addEventListener('click', function(){
-          const pw = document.getElementById('pw').value.trim();
-          const url = new URL(window.location.href);
-          url.searchParams.set('password', pw);
-          window.location.href = url.toString();
-        });
-        pwInput.addEventListener('keydown', function(e){
-          if (e.key === 'Enter') { go.click(); }
-        });
         // Enfocar el campo para facilitar el reintento
         setTimeout(function(){ pwInput.focus(); pwInput.select && pwInput.select(); }, 10);
       })();
