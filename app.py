@@ -143,8 +143,10 @@ def healthz():
     except Exception:
         return text_response("down", 502)
 
-# Importar clips y registrar la ruta
+# Importar los endpoints de Twitch necesarios
 from twitch.endpoints import clips, create_clip_endpoint
+
+# Registro de rutas de Twitch (después del import)
 app.add_url_rule('/twitch/clips', view_func=limiter.limit("60 per minute")(clips))
 app.add_url_rule('/twitch/clips/create', view_func=limiter.limit("10 per minute")(create_clip_endpoint), methods=['GET', 'POST'])
 

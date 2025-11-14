@@ -1,5 +1,6 @@
 import time
 from typing import Optional
+import os
 import requests
 from .config import CLIENT_ID, CLIENT_SECRET, APP_TOKEN as CONFIG_APP_TOKEN, USER_ACCESS_TOKEN
 
@@ -77,33 +78,48 @@ def validate_token(token: str) -> dict:
     r.raise_for_status()
     return r.json()
 
-def get_clips(broadcaster_id: str, first: int = 5, started_at: Optional[str] = None, ended_at: Optional[str] = None):
+def get_clips(channel: str, limit: int = 5):
     """
-    Devuelve lista de clips del canal (Helix /clips).
-    Requiere token de aplicación (Client-ID + App token).
+    Obtiene clips del canal (broadcaster) usando Twitch Helix.
+    Requiere token de aplicación (App Access Token) y Client-ID.
     """
-    url = "https://api.twitch.tv/helix/clips"
-    params = {"broadcaster_id": broadcaster_id, "first": max(1, min(first, 100))}
-    if started_at:
-        params["started_at"] = started_at
-    if ended_at:
-        params["ended_at"] = ended_at
-    r = requests.get(url, headers=_headers(), params=params, timeout=10)
-    r.raise_for_status()
-    return r.json().get("data", [])
+    if not channel:
+        raise ValueError("channel es requerido para listar clips")
 
+    broadcaster_id = get_user_id(channel)
+    if not broadcaster_id:
+        raise RuntimeError(f"No se pudo resolver el ID del canal '{channel}'")
 
-def create_clip(broadcaster_id: str, has_delay: bool = False) -> dict:
-    """
-    Crea un clip para el canal indicado (Helix POST /clips).
-    Requiere token de usuario con scope 'clips:edit' y que el canal esté en vivo.
-    """
     url = "https://api.twitch.tv/helix/clips"
     params = {
         "broadcaster_id": broadcaster_id,
-        "has_delay": "true" if has_delay else "false",
+        "first": max(1, min(int(limit or 5), 100)),
     }
-    r = requests.post(url, headers=_headers_user(), params=params, timeout=10)
-    r.raise_for_status()
-    items = r.json().get("data", [])
-    return items[0] if items else {}
+
+    resp = requests.get(url, headers=_headers(), params=params, timeout=20)
+    resp.raise_for_status()
+    payload = resp.json()
+    return payload.get("data", [])
+
+def create_clip(channel: str, has_delay: bool | None = None, user_token: str | None = None):
+    """
+    Crea un clip en el canal usando Twitch Helix.
+    Requiere token de usuario con scope 'clips:edit'.
+    """
+    token_to_use = user_token or os.environ.get("TWITCH_USER_TOKEN")
+    if not token_to_use:
+        raise RuntimeError("Falta TWITCH_USER_TOKEN con scope 'clips:edit'")
+
+    broadcaster_id = get_user_id(channel)
+    if not broadcaster_id:
+        raise RuntimeError(f"No se pudo resolver el ID del canal '{channel}'")
+
+    url = "https://api.twitch.tv/helix/clips"
+    body = {"broadcaster_id": broadcaster_id}
+    if has_delay is not None:
+        body["has_delay"] = bool(has_delay)
+
+    resp = requests.post(url, headers=_headers_user(token_to_use), json=body, timeout=20)
+    resp.raise_for_status()
+    payload = resp.json()
+    return payload.get("data", [])

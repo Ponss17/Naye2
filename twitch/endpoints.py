@@ -8,7 +8,7 @@ import logging
 from common.response import text_response
 from common.http import get_session
 from common.cache import SimpleTTLCache
-from .api import get_user_id, get_follow_info, get_app_token, validate_token, get_clips, create_clip
+from twitch.api import get_user_id, get_follow_info, validate_token, get_clips, create_clip
 
 _session = get_session()
 _cache = SimpleTTLCache(default_ttl=15)
