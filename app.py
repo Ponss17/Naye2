@@ -128,6 +128,7 @@ app.add_url_rule('/twitch/followage', view_func=limiter.limit("60 per minute")(f
 app.add_url_rule('/twitch/token', view_func=limiter.limit("10 per minute")(token))
 app.add_url_rule('/twitch/status', view_func=limiter.limit("30 per minute")(status))
 app.add_url_rule('/oauth/callback', view_func=oauth_callback, methods=['GET','POST'])
+app.add_url_rule('/twitch/clips', view_func=limiter.limit("60 per minute")(clips))
 
 @app.route('/healthz')
 def healthz():
@@ -143,8 +144,9 @@ def healthz():
         return text_response("down", 502)
 
 # Importar clips y registrar la ruta
-from twitch.endpoints import clips
+from twitch.endpoints import clips, create_clip_endpoint
 app.add_url_rule('/twitch/clips', view_func=limiter.limit("60 per minute")(clips))
+app.add_url_rule('/twitch/clips/create', view_func=limiter.limit("10 per minute")(create_clip_endpoint), methods=['GET', 'POST'])
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))

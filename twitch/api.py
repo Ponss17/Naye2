@@ -80,7 +80,7 @@ def validate_token(token: str) -> dict:
 def get_clips(broadcaster_id: str, first: int = 5, started_at: Optional[str] = None, ended_at: Optional[str] = None):
     """
     Devuelve lista de clips del canal (Helix /clips).
-    Params: broadcaster_id, first (1-100), started_at/ended_at ISO8601 opcional.
+    Requiere token de aplicación (Client-ID + App token).
     """
     url = "https://api.twitch.tv/helix/clips"
     params = {"broadcaster_id": broadcaster_id, "first": max(1, min(first, 100))}
@@ -91,3 +91,19 @@ def get_clips(broadcaster_id: str, first: int = 5, started_at: Optional[str] = N
     r = requests.get(url, headers=_headers(), params=params, timeout=10)
     r.raise_for_status()
     return r.json().get("data", [])
+
+
+def create_clip(broadcaster_id: str, has_delay: bool = False) -> dict:
+    """
+    Crea un clip para el canal indicado (Helix POST /clips).
+    Requiere token de usuario con scope 'clips:edit' y que el canal esté en vivo.
+    """
+    url = "https://api.twitch.tv/helix/clips"
+    params = {
+        "broadcaster_id": broadcaster_id,
+        "has_delay": "true" if has_delay else "false",
+    }
+    r = requests.post(url, headers=_headers_user(), params=params, timeout=10)
+    r.raise_for_status()
+    items = r.json().get("data", [])
+    return items[0] if items else {}
