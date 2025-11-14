@@ -2,7 +2,7 @@ from flask import request, Response, url_for
 from datetime import datetime, timezone
 from .config import CHANNEL_LOGIN, CLIENT_ID, CLIENT_SECRET, USER_ACCESS_TOKEN, ENDPOINT_PASSWORD
 import urllib.parse
-from .api import get_user_id, get_follow_info, get_app_token, validate_token
+from .api import get_user_id, get_follow_info, get_app_token, validate_token, get_clips
 import requests
 import re
 import logging

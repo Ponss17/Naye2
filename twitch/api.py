@@ -6,7 +6,6 @@ from .config import CLIENT_ID, CLIENT_SECRET, APP_TOKEN as CONFIG_APP_TOKEN, USE
 APP_TOKEN = None
 APP_TOKEN_EXPIRY = 0
 
-
 def get_app_token():
     global APP_TOKEN, APP_TOKEN_EXPIRY
     now = time.time()
@@ -28,14 +27,12 @@ def get_app_token():
     APP_TOKEN_EXPIRY = now + int(expires_in) - 60
     return APP_TOKEN
 
-
 def _headers():
     token = CONFIG_APP_TOKEN or get_app_token()
     return {
         "Client-ID": CLIENT_ID,
         "Authorization": f"Bearer {token}",
     }
-
 
 def _headers_user():
     token = (USER_ACCESS_TOKEN or "").strip()
@@ -47,7 +44,6 @@ def _headers_user():
         "Authorization": f"Bearer {token}",
     }
 
-
 def get_user_id(login: str) -> Optional[str]:
     url = "https://api.twitch.tv/helix/users"
     params = {"login": login}
@@ -57,7 +53,6 @@ def get_user_id(login: str) -> Optional[str]:
     if not data:
         return None
     return data[0].get("id")
-
 
 def get_follow_info(follower_id: str, channel_id: str):
     url = "https://api.twitch.tv/helix/channels/followers"
@@ -71,7 +66,6 @@ def get_follow_info(follower_id: str, channel_id: str):
     follow = items[0]
     return follow
 
-
 def validate_token(token: str) -> dict:
     """
     Valida un token contra https://id.twitch.tv/oauth2/validate
@@ -82,3 +76,18 @@ def validate_token(token: str) -> dict:
     r = requests.get(url, headers=headers, timeout=10)
     r.raise_for_status()
     return r.json()
+
+def get_clips(broadcaster_id: str, first: int = 5, started_at: Optional[str] = None, ended_at: Optional[str] = None):
+    """
+    Devuelve lista de clips del canal (Helix /clips).
+    Params: broadcaster_id, first (1-100), started_at/ended_at ISO8601 opcional.
+    """
+    url = "https://api.twitch.tv/helix/clips"
+    params = {"broadcaster_id": broadcaster_id, "first": max(1, min(first, 100))}
+    if started_at:
+        params["started_at"] = started_at
+    if ended_at:
+        params["ended_at"] = ended_at
+    r = requests.get(url, headers=_headers(), params=params, timeout=10)
+    r.raise_for_status()
+    return r.json().get("data", [])
