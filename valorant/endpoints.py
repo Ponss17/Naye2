@@ -114,12 +114,12 @@ def obtener_ultimo_agente():
 
 # Ultima ranked 
 def ultima_ranked():
-    """Mantengo este endpoint adicional para detalles de la última ranked."""
+    """Devuelve detalles de la última partida competitiva (ranked). Si la última no es ranked, busca la más reciente que sí lo sea."""
     try:
         name_q = _quoted(NOMBRE)
         tag_q = _quoted(TAG)
 
-        cache_key = f"ultima:{REGION}:{name_q}:{tag_q}"
+        cache_key = f"ultima_competitiva:{REGION}:{name_q}:{tag_q}"
         cached = _cache.get(cache_key)
         if cached:
             return text_response(cached)
@@ -135,9 +135,16 @@ def ultima_ranked():
         if data.get('status') != 200 or not data.get('data'):
             return text_response("No hay partidas recientes")
 
-        match = data['data'][0]
-        mapa = match.get('metadata', {}).get('map')
+        # Buscar la última partida competitiva
+        match = None
+        for partida in data['data']:
+            if partida.get('metadata', {}).get('mode', '').lower() == 'competitive':
+                match = partida
+                break
+        if not match:
+            return text_response("No se encontró partida competitiva reciente")
 
+        mapa = match.get('metadata', {}).get('map')
         personaje = "?"
         k, d, a = 0, 0, 0
         gano = False
