@@ -76,36 +76,3 @@ def validate_token(token: str) -> dict:
     r = requests.get(url, headers=headers, timeout=10)
     r.raise_for_status()
     return r.json()
-
-def get_clips(channel: str, limit: int = 5):
-    if not channel:
-        raise ValueError("channel es requerido para listar clips")
-    broadcaster_id = get_user_id(channel)
-    if not broadcaster_id:
-        raise RuntimeError(f"No se pudo resolver el ID del canal '{channel}'")
-    url = "https://api.twitch.tv/helix/clips"
-    params = {
-        "broadcaster_id": broadcaster_id,
-        "first": max(1, min(int(limit or 5), 100)),
-    }
-    resp = requests.get(url, headers=_headers(), params=params, timeout=20)
-    resp.raise_for_status()
-    payload = resp.json()
-    return payload.get("data", [])
-
-def create_clip(channel: str, has_delay: bool | None = None, user_token: str | None = None):
-    token_to_use = user_token or os.environ.get("TWITCH_USER_TOKEN")
-    if not token_to_use:
-        raise RuntimeError("Falta TWITCH_USER_TOKEN con scope 'clips:edit'")
-    broadcaster_id = get_user_id(channel)
-    if not broadcaster_id:
-        raise RuntimeError(f"No se pudo resolver el ID del canal '{channel}'")
-    url = "https://api.twitch.tv/helix/clips"
-    body = {"broadcaster_id": broadcaster_id}
-    if has_delay is not None:
-        body["has_delay"] = bool(has_delay)
-    resp = requests.post(url, headers=_headers_user(token_to_use), json=body, timeout=20)
-    resp.raise_for_status()
-    payload = resp.json()
-    items = payload.get("data", [])
-    return items[0] if items else None
