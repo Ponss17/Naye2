@@ -44,6 +44,23 @@ def _headers_user(token: Optional[str] = None):
         "Authorization": f"Bearer {tok}",
     }
 
+def create_clip(channel: str, has_delay: bool | None = None, user_token: str | None = None):
+    token_to_use = (user_token or os.environ.get("TWITCH_USER_TOKEN") or "").strip()
+    if not token_to_use:
+        raise RuntimeError("Falta TWITCH_USER_TOKEN con scope 'clips:edit'")
+    broadcaster_id = get_user_id(channel)
+    if not broadcaster_id:
+        raise RuntimeError(f"No se pudo resolver el ID del canal '{channel}'")
+    url = "https://api.twitch.tv/helix/clips"
+    body = {"broadcaster_id": broadcaster_id}
+    if has_delay is not None:
+        body["has_delay"] = bool(has_delay)
+    resp = requests.post(url, headers=_headers_user(token_to_use), json=body, timeout=20)
+    resp.raise_for_status()
+    payload = resp.json()
+    items = payload.get("data", [])
+    return items[0] if items else None
+
 def get_user_id(login: str) -> Optional[str]:
     url = "https://api.twitch.tv/helix/users"
     params = {"login": login}

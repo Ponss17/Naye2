@@ -8,7 +8,7 @@ import logging
 from common.response import text_response
 from common.http import get_session
 from common.cache import SimpleTTLCache
-from twitch.api import get_user_id, get_follow_info, validate_token
+from twitch.api import get_user_id, get_follow_info, validate_token, create_clip
 
 _session = get_session()
 _cache = SimpleTTLCache(default_ttl=15)
@@ -573,3 +573,48 @@ def oauth_callback():
         pass
     resp.headers['Cache-Control'] = 'no-store'
     return resp
+
+
+def clip():
+    expected = (ENDPOINT_PASSWORD or "").strip()
+    raw_pwd = (request.args.get("password") or request.headers.get("X-Endpoint-Password") or request.cookies.get("endpoint_pwd") or "").strip()
+    if expected and raw_pwd != expected:
+        return text_response("Acceso no autorizado. Proporcione ?password=<clave> o header X-Endpoint-Password.", 401)
+
+    channel_login = request.args.get("channel", "").strip().lower() or (CHANNEL_LOGIN or "").strip().lower()
+    if not channel_login:
+        return text_response("Falta configurar TWITCH_CHANNEL_LOGIN o pasar ?channel=<login>.", 400)
+    if not re.fullmatch(r"^[A-Za-z0-9_]{1,32}$", channel_login):
+        return text_response("'channel' inválido. Usa A–Z, 0–9 y _.", 400)
+
+    has_delay = (request.args.get("has_delay") or "").strip().lower() in ("1", "true", "yes")
+
+    try:
+        clip_obj = create_clip(channel_login, has_delay=has_delay)
+    except RuntimeError as e:
+        return text_response(str(e), 500)
+    except requests.exceptions.HTTPError as e:
+        status = getattr(e.response, "status_code", 500)
+        msg = ""
+        try:
+            body = e.response.json()
+            msg = body.get("message") or body.get("error") or ""
+        except Exception:
+            try:
+                msg = e.response.text[:200]
+            except Exception:
+                msg = ""
+        return text_response(f"Error de Twitch ({status}): {msg}", 502)
+    except requests.exceptions.RequestException:
+        return text_response("No se pudo contactar a la API de Twitch.", 502)
+    except Exception:
+        logging.exception("Error inesperado en /twitch/clip")
+        return text_response("Error inesperado al crear clip.", 500)
+
+    if not clip_obj:
+        return text_response("No se pudo crear el clip (¿canal no está en vivo?).", 502)
+
+    clip_id = clip_obj.get("id") or ""
+    edit_url = clip_obj.get("edit_url") or ""
+    body = f"Clip creado:\n- id: {clip_id}\n- url: {edit_url}\n"
+    return text_response(body)

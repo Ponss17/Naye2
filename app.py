@@ -5,7 +5,7 @@ import urllib.parse
 from werkzeug.middleware.proxy_fix import ProxyFix
 from valorant.index import valorant_index
 from valorant.endpoints import rango, ultima_ranked
-from twitch.endpoints import followage, token, status, oauth_callback
+from twitch.endpoints import followage, token, status, oauth_callback, clip
 from twitch.index import twitch_index
 from common.response import text_response
 import logging
@@ -128,6 +128,7 @@ app.add_url_rule('/twitch/followage', view_func=limiter.limit("60 per minute")(f
 app.add_url_rule('/twitch/token', view_func=limiter.limit("10 per minute")(token))
 app.add_url_rule('/twitch/status', view_func=limiter.limit("30 per minute")(status))
 app.add_url_rule('/oauth/callback', view_func=oauth_callback, methods=['GET','POST'])
+app.add_url_rule('/twitch/clip', view_func=limiter.limit("10 per minute")(clip), methods=['GET', 'POST'])
 
 
 if __name__ == "__main__":
